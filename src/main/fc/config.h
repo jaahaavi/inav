@@ -45,7 +45,7 @@ typedef enum {
 typedef enum {
     FEATURE_RX_PPM = 1 << 0,
     FEATURE_VBAT = 1 << 1,
-    FEATURE_UNUSED_1 = 1 << 2,          // Unused in INAV
+    FEATURE_RX_UIB = 1 << 2,            // UIB bus receiver
     FEATURE_RX_SERIAL = 1 << 3,
     FEATURE_MOTOR_STOP = 1 << 4,
     FEATURE_SERVO_TILT = 1 << 5,

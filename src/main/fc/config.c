@@ -225,7 +225,7 @@ void validateAndFixConfig(void)
 #endif
 
     // Disable unused features
-    featureClear(FEATURE_UNUSED_1 | FEATURE_UNUSED_2);
+    featureClear(FEATURE_UNUSED_2 | FEATURE_UNUSED_3 | FEATURE_UNUSED_4);
 
 #ifdef DISABLE_RX_PWM_FEATURE
     if (featureConfigured(FEATURE_RX_PARALLEL_PWM)) {
@@ -238,23 +238,27 @@ void validateAndFixConfig(void)
     }
 
     if (featureConfigured(FEATURE_RX_PPM)) {
-        featureClear(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_MSP | FEATURE_RX_SPI);
+        featureClear(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_MSP | FEATURE_RX_SPI | FEATURE_RX_UIB);
     }
 
     if (featureConfigured(FEATURE_RX_MSP)) {
-        featureClear(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM | FEATURE_RX_SPI);
+        featureClear(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM | FEATURE_RX_SPI | FEATURE_RX_UIB);
+    }
+
+    if (featureConfigured(FEATURE_RX_UIB)) {
+        featureClear(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM | FEATURE_RX_SPI | FEATURE_RX_MSP);
     }
 
     if (featureConfigured(FEATURE_RX_SERIAL)) {
-        featureClear(FEATURE_RX_PARALLEL_PWM | FEATURE_RX_MSP | FEATURE_RX_PPM | FEATURE_RX_SPI);
+        featureClear(FEATURE_RX_PARALLEL_PWM | FEATURE_RX_MSP | FEATURE_RX_PPM | FEATURE_RX_SPI | FEATURE_RX_UIB);
     }
 
     if (featureConfigured(FEATURE_RX_SPI)) {
-        featureClear(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM | FEATURE_RX_MSP);
+        featureClear(FEATURE_RX_SERIAL | FEATURE_RX_PARALLEL_PWM | FEATURE_RX_PPM | FEATURE_RX_MSP | FEATURE_RX_UIB);
     }
 
     if (featureConfigured(FEATURE_RX_PARALLEL_PWM)) {
-        featureClear(FEATURE_RX_SERIAL | FEATURE_RX_MSP | FEATURE_RX_PPM | FEATURE_RX_SPI);
+        featureClear(FEATURE_RX_SERIAL | FEATURE_RX_MSP | FEATURE_RX_PPM | FEATURE_RX_SPI | FEATURE_RX_UIB);
 #if defined(STM32F10X)
         // rssi adc needs the same ports
         featureClear(FEATURE_RSSI_ADC);

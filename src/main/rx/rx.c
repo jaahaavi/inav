@@ -61,6 +61,7 @@
 #include "rx/rx_spi.h"
 #include "rx/crsf.h"
 #include "rx/eleres.h"
+#include "rx/uib_rx.h"
 
 
 //#define DEBUG_RX_SIGNAL_LOSS
@@ -285,6 +286,13 @@ void rxInit(void)
 #ifdef USE_RX_MSP
     if (feature(FEATURE_RX_MSP)) {
         rxMspInit(rxConfig(), &rxRuntimeConfig);
+        needRxSignalMaxDelayUs = DELAY_5_HZ;
+    }
+#endif
+
+#ifdef USE_RX_UIB
+    if (feature(FEATURE_RX_UIB)) {
+        rxUIBInit(rxConfig(), &rxRuntimeConfig);
         needRxSignalMaxDelayUs = DELAY_5_HZ;
     }
 #endif
