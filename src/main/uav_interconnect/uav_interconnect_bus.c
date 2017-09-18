@@ -117,7 +117,7 @@ static int                      refreshSlot;
 static timeUs_t                 refreshStartTimeUs;
 
 static uint8_t                  slotDataBuffer[20]; // Max transaction length is 20 bytes
-static int                      slotDataBufferCount;
+static unsigned                 slotDataBufferCount;
 static timeUs_t                 slotLastActivityUs;
 
 // Statistics
@@ -198,7 +198,7 @@ static int findEmptySlot(void)
     return -1;
 }
 
-static void registerDeviceSlot(uint8_t slotId, uint8_t devId, uint16_t deviceFlags, uint32_t pollIntervalUs, uint8_t * devParams)
+static void registerDeviceSlot(uint8_t slotId, uint8_t devId, uint16_t deviceFlags, uint32_t pollIntervalUs, const uint8_t * devParams)
 {
     slots[slotId].allocated = true;
     slots[slotId].deviceAddress = devId;
@@ -224,11 +224,50 @@ static void registerDeviceSlot(uint8_t slotId, uint8_t devId, uint16_t deviceFla
     slots[slotId].unrepliedRequests = 0;
 }
 
+typedef struct __attribute__((packed)) {
+    uint8_t slotAndCmd;
+    uint8_t  devId;
+    uint8_t  protoVersion;
+    uint8_t  crc1;
+    uint16_t pollIntervalMs;
+    uint16_t devFlags;
+    uint8_t  devParams[4];
+    uint8_t  crc2;
+} uibPktIdentify_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t slotAndCmd;
+    uint8_t devId;
+    uint8_t protoVersion;
+    uint8_t crc1;
+} uibPktNotify_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t slotAndCmd;
+    uint8_t crc1;
+    uint8_t size;
+    uint8_t data[0];
+} uibPktRead_t;
+
+typedef struct __attribute__((packed)) {
+    uint8_t slotAndCmd;
+    uint8_t size;
+    uint8_t data[0];
+} uibPktWrite_t;
+
+typedef union {
+    uibPktIdentify_t    ident;
+    uibPktNotify_t      notify;
+    uibPktRead_t        read;
+    uibPktWrite_t       write;
+} uibPktData_t;
+
 static void processSlot(void)
 {
     // First byte is command / slot
     const uint8_t cmd = slotDataBuffer[0] & 0xE0;
     const uint8_t slot = slotDataBuffer[0] & 0x1F;
+    const uibPktData_t * pkt = (const uibPktData_t *)&slotDataBuffer[0];
     const int lastPacketByteIndex = slotDataBufferCount - 1;
 
     // CRC is calculated over the whole slot, including command byte(s) sent by FC. This ensures integrity of the transaction as a whole
@@ -237,24 +276,11 @@ static void processSlot(void)
         //      FC:     IDENTIFY[1] + DevID[1] + ProtoVersion [1] + CRC1[1]
         //      DEV:    PollInterval[2] + Flags[2] + DevParams[4] + CRC2[1]
         case UIB_COMMAND_IDENTIFY:
-            if (slotDataBufferCount == 13) {
-                if (crc8_dvb_s2_update(0x00, &slotDataBuffer[0], slotDataBufferCount - 1) == slotDataBuffer[lastPacketByteIndex]) {
+            if (slotDataBufferCount == sizeof(uibPktIdentify_t)) {
+                if (crc8_dvb_s2_update(0x00, pkt, slotDataBufferCount - 1) == pkt->ident.crc2) {
                     // CRC valid - process valid IDENTIFY slot
-                    if (slots[slot].allocated && (slots[slot].deviceAddress == slotDataBuffer[1])) {
-                        // This is a refresh - only update devFlags & pollInterval
-                        slots[slot].deviceFlags = slotDataBuffer[6] << 8 | slotDataBuffer[7];
-                        slots[slot].pollIntervalUs = (slotDataBuffer[4] << 8 | slotDataBuffer[5]) * 1000;
-                        slots[slot].unrepliedRequests = 0;
-                    }
-                    else {
-                        registerDeviceSlot(slot,
-                                           slotDataBuffer[1],
-                                           (uint16_t)slotDataBuffer[6] << 8 | slotDataBuffer[7],
-                                           ((uint32_t)slotDataBuffer[4] << 8 | slotDataBuffer[5]) * 1000,
-                                           &slotDataBuffer[8]);
-
-                        uibStats.discoveredDevices++;
-                    }
+                    registerDeviceSlot(slot, pkt->ident.devId, pkt->ident.devFlags, pkt->ident.pollIntervalMs * 1000, pkt->ident.devParams);
+                    uibStats.discoveredDevices++;
                 }
                 else {
                     uibStats.failedCRC++;
@@ -268,9 +294,9 @@ static void processSlot(void)
         // NOTIFY command (4 bytes)
         //      FC:     IDENTIFY[1] + DevID[1] + ProtoVersion [1] + CRC1[1]
         case UIB_COMMAND_NOTIFY:
-            if (slotDataBufferCount == 4) {
+            if (slotDataBufferCount == sizeof(uibPktNotify_t)) {
                 // Record failed CRC. Do nothing else - NOTIFY is only sent for devices that already have a slot assigned
-                if (crc8_dvb_s2_update(0x00, &slotDataBuffer[0], slotDataBufferCount - 1) != slotDataBuffer[lastPacketByteIndex]) {
+                if (crc8_dvb_s2_update(0x00, pkt, slotDataBufferCount - 1) != pkt->notify.crc1) {
                     uibStats.failedCRC++;
                 }
 
@@ -282,14 +308,14 @@ static void processSlot(void)
         //      FC:     READ[1] + CRC1[1]
         //      DEV:    DATA_LEN[1] + DATA[variable] + CRC2[1]
         case UIB_COMMAND_READ:
-            if ((slotDataBufferCount >= 4) && (slotDataBufferCount == (slotDataBuffer[2] + 4)) && (slotDataBuffer[2] <= UIB_MAX_PACKET_SIZE)) {
-                if (crc8_dvb_s2_update(0x00, &slotDataBuffer[0], slotDataBufferCount - 1) == slotDataBuffer[lastPacketByteIndex]) {
+            if ((slotDataBufferCount >= sizeof(uibPktRead_t)) && (slotDataBufferCount == ((unsigned)pkt->read.size + 4)) && (pkt->read.size <= UIB_MAX_PACKET_SIZE)) {
+                if (crc8_dvb_s2_update(0x00, pkt, slotDataBufferCount - 1) == slotDataBuffer[lastPacketByteIndex]) {
                     // CRC valid - process valid READ slot
                     // Check if this slot has read capability and is allocated
                     if (slots[slot].allocated && (slots[slot].deviceFlags & UIB_FLAG_HAS_READ)) {
-                        if (slots[slot].rxDataReadySize == 0 && (slotDataBuffer[2] > 0)) {
-                            memcpy(slots[slot].rxPacket, &slotDataBuffer[3], slotDataBuffer[2]);
-                            slots[slot].rxDataReadySize = slotDataBuffer[2];
+                        if ((slots[slot].rxDataReadySize == 0) && (pkt->read.size > 0)) {
+                            memcpy(slots[slot].rxPacket, pkt->read.data, pkt->read.size);
+                            slots[slot].rxDataReadySize = pkt->read.size;
                         }
 
                         slots[slot].unrepliedRequests = 0;
@@ -307,9 +333,9 @@ static void processSlot(void)
         // Write command (min 3 bytes)
         //      FC:     WRITE[1] + DATA_LEN[1] + DATA[variable] + CRC1[1]
         case UIB_COMMAND_WRITE:
-            if ((slotDataBufferCount >= 3) && (slotDataBufferCount == (slotDataBuffer[1] + 3)) && (slotDataBuffer[1] <= UIB_MAX_PACKET_SIZE)) {
+            if ((slotDataBufferCount >= sizeof(uibPktWrite_t)) && (slotDataBufferCount == ((unsigned)pkt->write.size + 3)) && (pkt->write.size <= UIB_MAX_PACKET_SIZE)) {
                 // Keep track of failed CRC events
-                if (crc8_dvb_s2_update(0x00, &slotDataBuffer[0], slotDataBufferCount - 1) != slotDataBuffer[lastPacketByteIndex]) {
+                if (crc8_dvb_s2_update(0x00, pkt, slotDataBufferCount - 1) != slotDataBuffer[lastPacketByteIndex]) {
                     uibStats.failedCRC++;
                 }
 
