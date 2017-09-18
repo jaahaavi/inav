@@ -73,7 +73,7 @@ typedef enum {
 #define UIB_PORT_OPTIONS        (SERIAL_NOT_INVERTED | SERIAL_STOPBITS_1 | SERIAL_PARITY_NO | SERIAL_UNIDIR)
 
 #define UIB_DISCOVERY_DELAY_US  2000000 // 2 seconds from power-up to allow all devices to boot
-#define UIB_GUARD_INTERVAL_US   2000
+#define UIB_GUARD_INTERVAL_US   1000
 #define UIB_REFRESH_INTERVAL_US 200000
 
 typedef struct {
