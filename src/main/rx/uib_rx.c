@@ -43,7 +43,7 @@
 
 #include "uav_interconnect/uav_interconnect.h"
 
-#define UIB_DEVICE_ADDRESS      0x80
+#define UIB_DEVICE_ADDRESS      UIB_DEVICE_ID_RC_RECEIVER
 
 typedef struct __attribute__((packed)) {
     uint8_t  flags;         // UIB_DATA_VALID (0x01) - link ok

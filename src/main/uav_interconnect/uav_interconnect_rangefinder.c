@@ -45,7 +45,7 @@
 #include "drivers/rangefinder.h"
 #include "uav_interconnect/uav_interconnect.h"
 
-#define UIB_DEVICE_ADDRESS      0x12
+#define UIB_DEVICE_ADDRESS                      UIB_DEVICE_ID_RANGEFINDER
 
 #define RANGEFINDER_MAX_RANGE_CM                1000
 #define RANGEFINDER_DETECTION_CONE_DECIDEGREES  450

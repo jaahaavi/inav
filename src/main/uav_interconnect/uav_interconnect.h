@@ -37,6 +37,11 @@
 
 #define UIB_MAX_PACKET_SIZE 32
 
+#define UIB_DEVICE_ID_RANGEFINDER       0x12
+#define UIB_DEVICE_ID_GPS               0x13
+#define UIB_DEVICE_ID_COMPASS           0x14
+#define UIB_DEVICE_ID_RC_RECEIVER       0x80
+
 typedef enum {
     UIB_DATA_NONE           = 0,
     UIB_DATA_VALID          = (1 << 0),     // Data is valid
