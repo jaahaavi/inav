@@ -236,7 +236,7 @@ static const mixer_t mixerTable[] = {
     DEF_MIXER( MIXER_QUADX,             PLATFORM_MULTIROTOR, 4,          false,      false,      mixerQuadX ),
 
 #if (MAX_SUPPORTED_MOTORS >= 6)
-    DEF_MIXER( MIXER_HEX6,              PLATFORM_MULTIROTOR, 6,          false,      false,      mixerHex6X ),
+    DEF_MIXER( MIXER_HEX6X,             PLATFORM_MULTIROTOR, 6,          false,      false,      mixerHex6X ),
 #endif
 
     DEF_MIXER( MIXER_CUSTOM,            PLATFORM_MULTIROTOR, 0,          false,      false,      NULL ),
@@ -292,7 +292,7 @@ const mixer_t * findMixer(mixerMode_e mixerMode)
     return NULL;
 }
 
-uint8_t getMotorCount()
+uint8_t getMotorCount(void)
 {
     return motorCount;
 }
@@ -450,7 +450,7 @@ void stopMotors(void)
     delay(50); // give the timers and ESCs a chance to react.
 }
 
-void stopPwmAllMotors()
+void stopPwmAllMotors(void)
 {
     pwmShutdownPulsesForAllMotors(motorCount);
 }

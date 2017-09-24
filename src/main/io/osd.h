@@ -20,15 +20,10 @@
 #include "common/time.h"
 #include "config/parameter_group.h"
 
-#define OSD_TASK_FREQUENCY_HZ   100
-
 #define VISIBLE_FLAG  0x0800
-#define BLINK_FLAG    0x0400
 #define VISIBLE(x)    (x & VISIBLE_FLAG)
-#define BLINK(x)      ((x & BLINK_FLAG) && blinkState)
-#define BLINK_OFF(x)  (x & ~BLINK_FLAG)
 #define OSD_POS_MAX   0x3FF
-#define OSD_POS_MAX_CLI   (OSD_POS_MAX | VISIBLE_FLAG | BLINK_FLAG)
+#define OSD_POS_MAX_CLI   (OSD_POS_MAX | VISIBLE_FLAG)
 
 typedef enum {
     OSD_RSSI_VALUE,
@@ -58,12 +53,17 @@ typedef enum {
     OSD_HEADING,
     OSD_VARIO,
     OSD_VARIO_NUM,
+    OSD_AIR_SPEED,
+    OSD_ONTIME_FLYTIME,
+    OSD_RTC_TIME,
+    OSD_MESSAGES,
     OSD_ITEM_COUNT // MUST BE LAST
 } osd_items_e;
 
 typedef enum {
     OSD_UNIT_IMPERIAL,
-    OSD_UNIT_METRIC
+    OSD_UNIT_METRIC,
+    OSD_UNIT_UK, // Show speed in mp/h, other values in metric
 } osd_unit_e;
 
 typedef struct osdConfig_s {
@@ -83,6 +83,7 @@ typedef struct osdConfig_s {
 
 PG_DECLARE(osdConfig_t, osdConfig);
 
-void osdInit(void);
-void osdResetAlarms(void);
+struct displayPort_s;
+void osdInit(struct displayPort_s *osdDisplayPort);
 void osdUpdate(timeUs_t currentTimeUs);
+void osdStartFullRedraw(void);

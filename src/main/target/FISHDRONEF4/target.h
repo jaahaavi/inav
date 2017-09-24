@@ -61,6 +61,7 @@
 #define USE_MAG_MAG3110
 #define USE_MAG_HMC5883
 #define USE_MAG_IST8310
+#define USE_MAG_QMC5883
 #define MAG_IST8310_ALIGN CW270_DEG
 
 // *************** BARO *****************************
@@ -79,8 +80,8 @@
 #define USE_MAX7456
 #define MAX7456_SPI_INSTANCE    SPI2
 #define MAX7456_SPI_CS_PIN      SPI2_NSS_PIN
-#define MAX7456_SPI_CLK         (SPI_CLOCK_STANDARD*2)
-#define MAX7456_RESTORE_CLK     (SPI_CLOCK_FAST)
+#define MAX7456_SPI_CLK         SPI_CLOCK_STANDARD
+#define MAX7456_RESTORE_CLK     SPI_CLOCK_FAST
 
 // *************** TF Support *****************************
 #define USE_SPI_DEVICE_3
@@ -95,11 +96,6 @@
 #define SDCARD_SPI_INSTANCE                 SPI3
 #define SDCARD_SPI_CS_PIN                   PB6
 
-// SPI3 is on the APB1 bus whose clock runs at 84MHz. Divide to under 400kHz for init:
-#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256 // 328kHz
-// Divide to under 25MHz for normal operation:
-#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4 // 21MHz
-
 #define SDCARD_DMA_CHANNEL_TX               DMA1_Stream5
 #define SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG DMA_FLAG_TCIF5
 #define SDCARD_DMA_CLK                      RCC_AHB1Periph_DMA1
@@ -112,6 +108,7 @@
 #define USE_FLASH_M25P16
 
 // *************** UART *****************************
+#define USB_IO
 #define USE_VCP
 
 // provide for Telemetry module

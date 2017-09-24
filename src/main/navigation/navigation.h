@@ -248,8 +248,8 @@ void navigationInit(void);
 
 /* Position estimator update functions */
 void updatePositionEstimator_BaroTopic(timeUs_t currentTimeUs);
-void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs);
 void updatePositionEstimator_OpticalFlowTopic(timeUs_t currentTimeUs);
+void updatePositionEstimator_SurfaceTopic(timeUs_t currentTimeUs, float newSurfaceAlt);
 
 /* Navigation system updates */
 void updateWaypointsAndNavigationMode(void);

@@ -57,7 +57,10 @@
 
 #define ACC
 #define GYRO
+
 #define MAG
+#define USE_MAG_QMC5883
+#define USE_MAG_HMC5883
 
 #define BARO
 #define USE_BARO_MS5611
@@ -70,11 +73,6 @@
 
 #define SDCARD_SPI_INSTANCE                 SPI3
 #define SDCARD_SPI_CS_PIN                   PD2
-
-// SPI is on the APB2 bus whose clock runs at 84MHz. Divide to under 400kHz for init:
-#define SDCARD_SPI_INITIALIZATION_CLOCK_DIVIDER 256 // 328kHz
-// Divide to under 25MHz for normal operation:
-#define SDCARD_SPI_FULL_SPEED_CLOCK_DIVIDER     4 // 21MHz
 
 #define SDCARD_DMA_CHANNEL_TX               DMA1_Stream5
 #define SDCARD_DMA_CHANNEL_TX_COMPLETE_FLAG DMA_FLAG_TCIF5
@@ -89,6 +87,7 @@
 #define ENSURE_MPU_DATA_READY_IS_LOW
 #define EXTI_CALLBACK_HANDLER_COUNT 1 // MPU data ready
 
+#define USB_IO
 #define USE_VCP
 #define VBUS_SENSING_PIN PA9
 #define VBUS_SENSING_ENABLED

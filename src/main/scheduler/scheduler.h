@@ -104,6 +104,13 @@ typedef enum {
 #ifdef USE_OPTICAL_FLOW
     TASK_OPFLOW,
 #endif
+#ifdef USE_RCSPLIT
+    TASK_RCSPLIT,
+#endif
+#ifdef VTX_CONTROL
+    TASK_VTXCTRL,
+#endif
+
     /* Count of real tasks */
     TASK_COUNT,
 

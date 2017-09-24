@@ -32,6 +32,7 @@
 #include "drivers/sensor.h"
 #include "drivers/serial.h"
 #include "drivers/stack_check.h"
+#include "drivers/vtx_common.h"
 
 #include "fc/cli.h"
 #include "fc/config.h"
@@ -54,6 +55,7 @@
 #include "io/osd.h"
 #include "io/pwmdriver_i2c.h"
 #include "io/serial.h"
+#include "io/rcsplit.h"
 
 #include "msp/msp_serial.h"
 
@@ -185,7 +187,12 @@ void taskUpdateRangefinder(timeUs_t currentTimeUs)
         rescheduleTask(TASK_SELF, newDeadline);
     }
 
-    updatePositionEstimator_SurfaceTopic(currentTimeUs);
+    /*
+     * Process raw rangefinder readout
+     */
+    if (rangefinderProcess(calculateCosTiltAngle())) {
+        updatePositionEstimator_SurfaceTopic(currentTimeUs, rangefinderGetLatestAltitude());
+    }
 }
 #endif
 
@@ -262,6 +269,19 @@ void taskUpdateOsd(timeUs_t currentTimeUs)
     if (feature(FEATURE_OSD)) {
         osdUpdate(currentTimeUs);
     }
+}
+#endif
+
+#ifdef VTX_CONTROL
+// Everything that listens to VTX devices
+void taskVtxControl(timeUs_t currentTimeUs)
+{
+    if (ARMING_FLAG(ARMED))
+        return;
+
+#ifdef VTX_COMMON
+    vtxCommonProcess(currentTimeUs);
+#endif
 }
 #endif
 
@@ -343,6 +363,11 @@ void fcTasksInit(void)
 #endif
 #ifdef USE_OPTICAL_FLOW
     setTaskEnabled(TASK_OPFLOW, sensors(SENSOR_OPFLOW));
+#endif
+#ifdef VTX_CONTROL
+#if defined(VTX_SMARTAUDIO) || defined(VTX_TRAMP)
+    setTaskEnabled(TASK_VTXCTRL, true);
+#endif
 #endif
 }
 
@@ -523,7 +548,7 @@ cfTask_t cfTasks[TASK_COUNT] = {
     [TASK_OSD] = {
         .taskName = "OSD",
         .taskFunc = taskUpdateOsd,
-        .desiredPeriod = TASK_PERIOD_HZ(OSD_TASK_FREQUENCY_HZ),
+        .desiredPeriod = TASK_PERIOD_HZ(250),
         .staticPriority = TASK_PRIORITY_LOW,
     },
 #endif
@@ -532,7 +557,7 @@ cfTask_t cfTasks[TASK_COUNT] = {
     [TASK_CMS] = {
         .taskName = "CMS",
         .taskFunc = cmsHandler,
-        .desiredPeriod = 1000000 / 60,          // 60 Hz
+        .desiredPeriod = TASK_PERIOD_HZ(50),
         .staticPriority = TASK_PRIORITY_LOW,
     },
 #endif
@@ -543,6 +568,24 @@ cfTask_t cfTasks[TASK_COUNT] = {
         .taskFunc = taskUpdateOpticalFlow,
         .desiredPeriod = TASK_PERIOD_HZ(100),   // I2C/SPI sensor will work at higher rate and accumulate, UIB sensor will work at lower rate w/o accumulation
         .staticPriority = TASK_PRIORITY_MEDIUM,
+    },
+#endif
+
+#ifdef USE_RCSPLIT
+    [TASK_RCSPLIT] = {
+        .taskName = "RCSPLIT",
+        .taskFunc = rcSplitProcess,
+        .desiredPeriod = TASK_PERIOD_HZ(10),        // 10 Hz, 100ms
+        .staticPriority = TASK_PRIORITY_MEDIUM,
+    },
+#endif
+
+#ifdef VTX_CONTROL
+    [TASK_VTXCTRL] = {
+        .taskName = "VTXCTRL",
+        .taskFunc = taskVtxControl,
+        .desiredPeriod = TASK_PERIOD_HZ(5),          // 5Hz @200msec
+        .staticPriority = TASK_PRIORITY_IDLE,
     },
 #endif
 };

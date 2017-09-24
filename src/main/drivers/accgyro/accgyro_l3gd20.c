@@ -81,7 +81,7 @@ static void l3gd20SpiInit(SPI_TypeDef *SPIx)
 
     DISABLE_L3GD20;
 
-    spiSetDivisor(L3GD20_SPI, SPI_CLOCK_STANDARD);
+    spiSetSpeed(L3GD20_SPI, SPI_CLOCK_STANDARD);
 }
 
 void l3gd20GyroInit(gyroDev_t *gyro)
@@ -152,8 +152,8 @@ static bool l3gd20GyroRead(gyroDev_t *gyro)
 
 bool l3gd20Detect(gyroDev_t *gyro)
 {
-    gyro->init = l3gd20GyroInit;
-    gyro->read = l3gd20GyroRead;
+    gyro->initFn = l3gd20GyroInit;
+    gyro->readFn = l3gd20GyroRead;
 
     gyro->scale = L3GD20_GYRO_SCALE_FACTOR;
 

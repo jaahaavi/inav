@@ -16,7 +16,7 @@
 #
 
 # The target to build, see VALID_TARGETS below
-TARGET    ?= NAZE
+TARGET    ?= SPRACINGF3
 
 # Compile-time options
 OPTIONS   ?=
@@ -541,12 +541,16 @@ COMMON_SRC = \
             build/build_config.c \
             build/debug.c \
             build/version.c \
+            common/bitarray.c \
+            common/crc.c \
             common/encoding.c \
             common/filter.c \
             common/maths.c \
             common/printf.c \
             common/streambuf.c \
+            common/time.c \
             common/typeconversion.c \
+            common/string_light.c \
             config/config_eeprom.c \
             config/config_streamer.c \
             config/feature.c \
@@ -567,11 +571,12 @@ COMMON_SRC = \
             drivers/rx_nrf24l01.c \
             drivers/rx_spi.c \
             drivers/rx_xn297.c \
+            drivers/pitotmeter_adc.c \
             drivers/pwm_esc_detect.c \
             drivers/pwm_mapping.c \
             drivers/pwm_output.c \
-            drivers/pwm_rx.c \
             drivers/rcc.c \
+            drivers/rx_pwm.c \
             drivers/serial.c \
             drivers/serial_uart.c \
             drivers/sound_beeper.c \
@@ -589,7 +594,9 @@ COMMON_SRC = \
             fc/rc_adjustments.c \
             fc/rc_controls.c \
             fc/rc_curves.c \
+            fc/rc_modes.c \
             fc/runtime_config.c \
+            fc/settings.c \
             fc/stats.c \
             flight/failsafe.c \
             flight/hil.c \
@@ -605,6 +612,7 @@ COMMON_SRC = \
             io/serial_4way_avrootloader.c \
             io/serial_4way_stk500v2.c \
             io/statusindicator.c \
+            io/rcsplit.c \
             msp/msp_serial.c \
             rx/ibus.c \
             rx/jetiexbus.c \
@@ -653,6 +661,8 @@ HIGHEND_SRC = \
             drivers/rangefinder_hcsr04_i2c.c \
             drivers/rangefinder_srf10.c \
             drivers/opflow_fake.c \
+            drivers/rangefinder_vl53l0x.c \
+            drivers/vtx_common.c \
             io/dashboard.c \
             io/displayport_max7456.c \
             io/displayport_msp.c \
@@ -682,7 +692,11 @@ HIGHEND_SRC = \
             telemetry/ltm.c \
             telemetry/mavlink.c \
             telemetry/smartport.c \
-            telemetry/telemetry.c
+            telemetry/telemetry.c \
+            io/vtx_string.c \
+            io/vtx_smartaudio.c \
+            io/vtx_tramp.c \
+            io/vtx_control.c
 
 ifeq ($(TARGET),$(filter $(TARGET),$(F4_TARGETS)))
 VCP_SRC = \
@@ -691,13 +705,15 @@ VCP_SRC = \
             vcpf4/usbd_desc.c \
             vcpf4/usbd_usr.c \
             vcpf4/usbd_cdc_vcp.c \
-            drivers/serial_usb_vcp.c
+            drivers/serial_usb_vcp.c \
+            drivers/usb_io.c
 else ifeq ($(TARGET),$(filter $(TARGET),$(F7_TARGETS)))
 VCP_SRC = \
             vcp_hal/usbd_desc.c \
             vcp_hal/usbd_conf.c \
             vcp_hal/usbd_cdc_interface.c \
-            drivers/serial_usb_vcp.c
+            drivers/serial_usb_vcp.c \
+            drivers/usb_io.c
 else
 VCP_SRC = \
             vcp/hw_config.c \
@@ -909,6 +925,29 @@ CLEAN_ARTIFACTS += $(TARGET_ELF) $(TARGET_OBJS) $(TARGET_MAP)
 # Make sure build date and revision is updated on every incremental build
 $(OBJECT_DIR)/$(TARGET)/build/version.o : $(TARGET_SRC)
 
+# Settings generator
+.PHONY: settings clean-settings
+UTILS_DIR			= $(ROOT)/src/utils
+SETTINGS_GENERATOR	= $(UTILS_DIR)/settings.rb
+
+GENERATED_SETTINGS	= $(SRC_DIR)/fc/settings_generated.h $(SRC_DIR)/fc/settings_generated.c
+SETTINGS_FILE 		= $(SRC_DIR)/fc/settings.yaml
+$(GENERATED_SETTINGS): $(SETTINGS_GENERATOR) $(SETTINGS_FILE)
+
+# Use a pattern rule, since they're different than normal rules.
+# See https://www.gnu.org/software/make/manual/make.html#Pattern-Examples
+%generated.h %generated.c:
+	$(V1) echo "settings.yaml -> settings_generated.h, settings_generated.c" "$(STDOUT)"
+	$(V1) CFLAGS="$(CFLAGS)" ruby $(SETTINGS_GENERATOR) . $(SETTINGS_FILE)
+
+settings: $(GENERATED_SETTINGS)
+clean-settings:
+	$(V1) $(RM) $(GENERATED_SETTINGS)
+
+# Files that depend on the generated settings
+$(OBJECT_DIR)/$(TARGET)/fc/cli.o: settings
+$(OBJECT_DIR)/$(TARGET)/fc/settings.o: settings
+
 # List of buildable ELF files and their object dependencies.
 # It would be nice to compute these lists, but that seems to be just beyond make.
 
@@ -918,9 +957,9 @@ $(TARGET_HEX): $(TARGET_ELF)
 $(TARGET_BIN): $(TARGET_ELF)
 	$(V0) $(OBJCOPY) -O binary $< $@
 
-$(TARGET_ELF):  $(TARGET_OBJS)
+$(TARGET_ELF): clean-settings $(TARGET_OBJS)
 	$(V1) echo Linking $(TARGET)
-	$(V1) $(CROSS_CC) -o $@ $^ $(LDFLAGS)
+	$(V1) $(CROSS_CC) -o $@ $(filter %.o, $^) $(LDFLAGS)
 	$(V0) $(SIZE) $(TARGET_ELF)
 
 # Compile
@@ -955,6 +994,7 @@ clean:
 	$(V0) echo "Cleaning $(TARGET)"
 	$(V0) rm -f $(CLEAN_ARTIFACTS)
 	$(V0) rm -rf $(OBJECT_DIR)/$(TARGET)
+	$(V0) rm -f $(GENERATED_SETTINGS)
 	$(V0) echo "Cleaning $(TARGET) succeeded."
 
 ## clean_test        : clean up all temporary / machine-generated files (tests)
